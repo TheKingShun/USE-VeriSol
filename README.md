@@ -1,4 +1,4 @@
-# useVeriSol-写一个小前端与VeriSol通信
+# useVeriSol-一个小前端与VeriSol通信
 前端使用H5
 后端使用flask
 组件库为element-ui
