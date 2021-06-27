@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>欢迎光临</title>
+    <script type="text/javascript" src="https://cdn.bootcss.com/qs/6.7.0/qs.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bootcss.com/axios/0.18.0/axios.min.js"></script>
+</head>
+<body>
+<div id="root" class="root">
+<!--两列的布局结构-->
+    <el-row>
+<!--        左边一列-->
+        <el-col :span="12">
+            <div >
+<!--                单选框-->
+                <el-radio v-model="radio" label="1" border>上传代码文件</el-radio>
+                <el-radio v-model="radio" label="2" border>在线编写文件</el-radio>
+            </div>
+
+            <el-select  v-model="version" placeholder="solidity编译版本选择" class="margin20" size="large">
+                <el-option
+                        v-for="item in options"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value">
+                </el-option>
+            </el-select>
+
+            <el-input placeholder="请输入内容" v-model="c_name" class="input_c_name">
+                <template slot="prepend">合约名：</template>
+            </el-input>
+
+            <div v-show="radio==1?true:false"  class="margin20">
+<!--                上传文件组件-->
+                    <el-upload
+                            
+                            :before-upload="beforeAvatarUpload"
+                            class="upload-demo"
+                            drag
+                            :auto-upload='false'
+                            before-upload
+                            action
+                            ref="upload"
+                            limit=1
+                            :on-exceed='exceedFiles'
+                            :http-request="httpRequest"
+                            multiple='false'
+                            >
+                        <i class="el-icon-upload"></i>
+                        <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+                        <div class="el-upload__tip" slot="tip">只能上传.sol文件，且不超过500kb</div>
+                    </el-upload>
+
+<!--选择solidity编译器-->
+
+            </div>
+
+
+
+<!--            在线编写代码-->
+            <div v-show="radio==2?true:false" class="margin20" style="padding-top: 16px;">
+                <el-input
+                        type="textarea"
+                        :rows="write_code_rows"
+                        placeholder="代码内容"
+                        v-model="textarea">
+                </el-input>
+            </div>
+
+
+        </el-col>
+
+
+
+
+<!--        右边一列-->
+        <el-col :span="12">
+            <el-row>
+                <el-col :span="24" style="margin-bottom: 15px">
+                    <div class="grid-content bg-purple-dark" >
+                        <el-input
+                                type="textarea"
+                                :rows="result_rows"
+                                placeholder="运行后这里会有Boogie结果"
+                                readonly="true"
+                                v-model="res_boogie">
+                        </el-input>
+                    </div>
+                </el-col>
+            </el-row>
+            <el-row>
+                <el-col :span="24" style="margin-bottom: 15px">
+                    <div class="grid-content bg-purple-dark">
+                        <el-input
+                                type="textarea"
+                                :rows="result_rows"
+                                placeholder="运行后这里会有程序判断结果"
+                                readonly="true"
+                                v-model="res_corral">
+                        </el-input>
+                    </div>
+                </el-col>
+            </el-row>
+            <el-row>
+                <el-col :span="24" style="margin-bottom: 15px">
+                    <div class="grid-content bg-purple-dark">
+                        <el-input
+                                type="textarea"
+                                :rows="result_rows"
+                                placeholder="运行后这里会有CMD结果"
+                                readonly="true"
+                                v-model="res_cmd">
+                        </el-input>
+                    </div>
+                </el-col>
+            </el-row>
+        </el-col>
+    </el-row>
+
+    <el-input
+        style="width: 90%;height: auto;"
+        type="textarea"
+        :rows="10"
+        readonly="true"
+        placeholder="这里显示中间转换语言IVL"
+        v-model="sol2boogie">
+    </el-input>
+
+
+    <el-button v-loading='isLoading' :disabled='isLoading' type="success" round class="btnStart" v-on:click="click2start()">开始运行</el-button>
+    <!-- <el-button v-bind:disabled='isSol2BoogieDisabled'  type="info" round class="btnStart margin20" v-on:click="click2showIVL">显示中间件IVL</el-button> -->
+
+
+
+    
+</div>
+</body>
+
+<!-- import Vue.js -->
+<script src="//vuejs.org/js/vue.min.js"></script>
+<!-- 引入样式 -->
+<link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+<!-- 引入组件库 -->
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+
+
+
+
+
+<script>
+// import axios from 'axios'
+    var root = new Vue({
+        el:"#root",
+        data:{
+            radio:'1',
+            textarea : '',
+            options: [{
+                value: '1',
+                label: '0.4.20'
+            }, {
+                value: '2',
+                label: '0.5.15'
+            }, {
+                value: '3',
+                label: '0.6.10'
+            }, {
+                value: '4',
+                label: '0.7.2'
+            }, {
+                value: '5',
+                label: '0.8.5'
+            }],
+            version: '',
+            res_boogie:'',
+            res_corral:'',
+            res_cmd:'',
+            isLoading:false,
+            url_upload:'http://127.0.0.1:5000/upload',
+            url_deal:'http://127.0.0.1:5000/deal',
+            c_name:'',
+            sol2boogie:'',
+            result_rows:8,
+            write_code_rows:19
+        },
+        methods:{
+            
+            httpRequest:function(param){
+                console.log('===param===',param);
+                console.log('===httprequest test===');          
+                let fileObj = param.file; // 相当于input里取得的files
+                console.log('===fileobj is ===',fileObj);
+
+                let data = new FormData(); // FormData 对象
+
+                data.append("file", fileObj); // 文件对象
+                data.append('name',root.c_name)
+                console.log('===c_name is ===',root.c_name);
+                console.log('===data is  start===');
+                data.forEach((value, key) => {
+                    console.log("key %s: value %s", key, value);
+                })
+                console.log('===data is  end===');
+
+                axios({
+                    method: "POST",
+                    url: this.url_upload,
+                    headers: {
+                    'Content-Type': "multipart/form-data",
+                    },
+                    //这部分非常重要，否则formdata会被转格式
+                    transformRequest: [function(){
+                        return data;
+                    }],
+                    // data: data,
+                    // params: data,
+                })
+                .then(res => {
+                    console.log('===res===',res);
+                    this.res_boogie = res.data.res_boogie
+                    root.res_corral = res.data.res_corral == ''?
+                        (res.data.cmd_output.includes('Compilation Error')?'编译错误,可能引入了其他文件':'完全正确'):res.data.res_corral.includes('Invalid input: Implementation of main procedure not found')?
+                        '合约名提供错误':res.data.res_corral.includes('This assertion can fail')?'断言不能通过，该程序存在问题':res.data.res_corral
+                    this.res_cmd = res.data.cmd_output
+                    this.textarea = res.data.source_file
+                    this.isLoading = false
+                    root.sol2boogie = res.data.sol2boogie
+                })
+                .catch(err => {
+                console.log(err);
+                this.isLoading = false
+                });
+
+            },
+
+
+
+            click2start:function () {
+
+                if(this.version == ''){
+                    this.windowMsg('error','please choose the same version of you solidity file')
+                    return 
+                }
+
+                if(this.c_name == ''){
+                    this.windowMsg('error','please write ths main name of this contract file')
+                    return 
+                }
+                
+
+                this.isLoading = true
+                if(this.radio == '1'){
+                    this.cleanAll(1)
+                    this.radio = '2',
+                    this.$refs.upload.submit()
+                    this.windowMsg('success','上传成功，正在进行形式化验证......')
+                    return 
+                }
+
+
+                this.cleanAll(2)
+                this.windowMsg('success','自定义成功，正在进行形式化验证......')
+ 
+                
+                axios.post('http://127.0.0.1:5000/deal',{
+                   solFile:this.textarea,
+                   c_name:this.c_name
+               }).then(function (res) {
+                   root.isLoading = false
+                   console.log(res);
+                   console.log(res.status)
+
+                   root.res_boogie = res.data.res_boogie
+                   root.res_corral = res.data.res_corral == ''?
+                        (res.data.cmd_output.includes('Compilation Error')?'编译错误,可能引入了其他文件':'完全正确'):res.data.res_corral.includes('Invalid input: Implementation of main procedure not found')?
+                        '合约名提供错误':res.data.res_corral.includes('This assertion can fail')?'断言不能通过，该程序存在问题':res.data.res_corral
+                   root.res_cmd = res.data.cmd_output
+                   root.sol2boogie = res.data.sol2boogie
+
+                
+               }).catch(function (error) {
+                   console.log('==err==',error)
+                   root.isLoading = false
+               })
+
+
+
+            },
+            beforeAvatarUpload:function (file) {
+                const isLt2K = file.size/ 1024 < 2;
+                if(isLt2K){
+                    this.windowMsg('error','the size of file must be letter then 2k')
+                    return 
+                }
+            },
+            exceedFiles:function(files,fileList){
+                this.windowMsg('error','the counts of file is out of the limit')
+            },
+            cleanAll:function(index){
+                if(index == 1){
+                    this.textarea = ''
+                }
+                this.res_boogie = ''
+                this.res_corral = ''
+                this.res_cmd = ''
+                this.sol2boogie=''
+            },
+            windowMsg:function(type,msg){
+                this.$message({
+                    showClose: true,
+                    message: msg,
+                    type: type
+                    });
+            }
+        }
+    })
+
+</script>
+
+<style>
+
+    .root{
+        width: 100%;
+        height: 100%;
+        margin: auto;
+        display: block;
+        text-align:center;
+
+    }
+    .btnStart{
+        margin-top: 15px;
+        width: 80%;
+        height: auto;
+    }
+
+</style>
+<style>
+    .input_c_name{
+        width: 50%;
+    }
+
+    .margin20{
+        margin: 20px;
+    }
+    .el-col {
+        border-radius: 4px;
+    }
+    .bg-purple-dark {
+        background: #99a9bf;
+    }
+    .bg-purple {
+        background: #d3dce6;
+    }
+    .bg-purple-light {
+        background: #e5e9f2;
+    }
+    .grid-content {
+        border-radius: 4px;
+        min-height: 36px;
+    }
+    .row-bg {
+        padding: 10px 0;
+        background-color: #f9fafc;
+    }
+</style>
+
+</html>

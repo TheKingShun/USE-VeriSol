@@ -1,0 +1,3 @@
+/home/tk/BlockChain/html/619/619-3/619-3/server/TT/user_write_sol_file.sol(3,1): : AssertFalse::Constructor (this = address!0, msg.sender = address!2, msg.value = 2)
+/home/tk/BlockChain/html/619/619-3/619-3/server/TT/user_write_sol_file.sol(6,1): : AssertFalse::test1 (this = address!0, msg.sender = address!3, msg.value = 4)
+/home/tk/BlockChain/html/619/619-3/619-3/server/TT/user_write_sol_file.sol(7,1): : ASSERTION FAILS!
